@@ -16,5 +16,6 @@ java -jar ./build/libs/brigid.jar < ~/tmp/secure-audit.log  > humanreadable.log
 gradle test
 
 # Test result html is viewable at:
+./build/reports/tests/index.html
 ./build/reports/tests/classes/com.bjond.test.TestBrigid.html
 
