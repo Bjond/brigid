@@ -28,6 +28,5 @@ TAGS~
 *.cache
 clients/html5-professional/node_modules/*
 clients/html5-professional/platforms/*
-*.log
 .nb-gradle
 clients/html5-desktop/app/scripts/bower_components/bjond-health-client-api/.bower.json
