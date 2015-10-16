@@ -19,3 +19,4 @@ gradle test
 ./build/reports/tests/index.html
 ./build/reports/tests/classes/com.bjond.test.TestBrigid.html
 
+
