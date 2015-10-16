@@ -1,5 +1,5 @@
 # brigid
-Accepts an audit log in stdin and emits an un-opaqued version to stdout
+Accepts an audit log in stdin and emits an un-opaqued version to stdout.
 Brigid is the Celtic god of knowledge and wisdom
 
 
