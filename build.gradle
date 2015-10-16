@@ -34,10 +34,13 @@ configurations {
 }
 
 dependencies {
+    compile 'org.postgresql:postgresql:9.4-1204-jdbc42'
     
     compile 'junit:junit:4.12'
 
+    compile 'org.apache.directory.studio:org.slf4j.log4j12:1.7.2'
     compile 'org.apache.logging.log4j:log4j:2.4.1'
+    compile 'org.lable.rfc3881.auditlogger.adapter:slf4j:1.3'
     
     // http://joel-costigliola.github.io/assertj/
     compile 'org.assertj:assertj-core:3.1.0'
@@ -92,6 +95,8 @@ jar {
         instruction 'Bundle-Activator', 'com.bjond.demo.SampleActivator'
     }
 
+    //include './src/main/resource/log4j2-test.xml'
+    
     // Include all of the dependencies. It explodes each jar file into class files and inserts the class files.
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }
