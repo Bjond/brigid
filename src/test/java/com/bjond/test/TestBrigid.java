@@ -46,7 +46,7 @@ public class TestBrigid
 
 
         // Try to find test data
-        val resource = new File("./src/test/resource/secure-audit.log");
+        val resource = new File("./src/main/resources/secure-audit.log");
         Assert.assertTrue("I found test data", resource.exists());
         assertThat(resource.exists()).isTrue();
     }

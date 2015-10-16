@@ -12,4 +12,9 @@ gradle clean
 # To run the application...
 java -jar ./build/libs/brigid.jar < ~/tmp/secure-audit.log  > humanreadable.log
 
+# To run tests
+gradle test
+
+# Test result html is viewable at:
+./build/reports/tests/classes/com.bjond.test.TestBrigid.html
 
