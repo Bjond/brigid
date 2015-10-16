@@ -94,8 +94,6 @@ jar {
         instruction 'Bundle-DocURL', 'http://www.bjondinc.com'
         instruction 'Bundle-Activator', 'com.bjond.demo.SampleActivator'
     }
-
-    //include './src/main/resource/log4j2-test.xml'
     
     // Include all of the dependencies. It explodes each jar file into class files and inserts the class files.
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -118,10 +116,7 @@ tasks.withType(FindBugs) {
 
 
 
-
-
-
-// Does nothing
+// Does nothing. Compatability with my emacs macros
 task deployroot (type: Copy){
 
 }
