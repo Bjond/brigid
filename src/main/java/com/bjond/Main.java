@@ -75,7 +75,7 @@ public class Main  {
             final Iterable<CSVRecord> records = CSVFormat.DEFAULT.withQuote('\'').parse(inReader);
 
             //outPrintStream.printf("%s%n%n", POSTGRESQL_URL);
-            outPrintStream.printf("PostgreSQL DB connectiion valid:  %b%n%n", db.isValid(1000));
+            log.info("PostgreSQL DB connectiion valid: {}", db.isValid(1000));
         
             records.forEach(record -> {
                     record.iterator().forEachRemaining(e -> {
@@ -95,6 +95,7 @@ public class Main  {
                 });
         }
 
+        log.info("Execution ends...");
     }
 
     
@@ -122,6 +123,16 @@ public class Main  {
         }
     }
 
+
+
+
+
+
+    /////////////////////////////////////////////////////////////////////////
+    //                            Database Methods                         //
+    /////////////////////////////////////////////////////////////////////////
+
+    
     public static User findUseByID(final Connection connection, final String ID) throws SQLException {
 
         //System.out.println("ID IS " + ID);
