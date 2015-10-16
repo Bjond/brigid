@@ -21,7 +21,6 @@ apply plugin: 'osgi'
 
 
 
-
 defaultTasks 'assemble', 'jar'
 
 repositories {
@@ -36,7 +35,9 @@ configurations {
 
 dependencies {
     
-    testCompile 'junit:junit:4.12'
+    compile 'junit:junit:4.12'
+
+    compile 'org.apache.logging.log4j:log4j:2.4.1'
     
     // http://joel-costigliola.github.io/assertj/
     compile 'org.assertj:assertj-core:3.1.0'
