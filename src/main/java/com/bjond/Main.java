@@ -23,17 +23,16 @@ import java.io.Reader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.handlers.BeanHandler;
-import org.apache.commons.dbutils.handlers.BeanListHandler;
 import org.apache.commons.lang.StringUtils;
 
+import com.bjond.entities.StringStub;
 import com.bjond.entities.User;
 
 import lombok.val;
@@ -55,7 +54,23 @@ public class Main  {
     private static final String OPENSHIFT_POSTGRESQL_DB_PASSWORD = System.getenv("OPENSHIFT_POSTGRESQL_DB_PASSWORD");
 
     static String POSTGRESQL_URL; 
+
+
+
+    // Caches
+    private static Map<String, User> userMap = new HashMap<>();     // ID, User
+    private static Map<String, String> tenantMap = new HashMap<>(); // ID, name
     
+    
+    /**
+	 *  Main entry point. Takes no parameters. Just accepts stdin and outputs to
+     * stdout. Old school...
+	 * 
+	 * @param args
+	 * 
+	 * @throws IOException
+	 * @throws SQLException
+	 */
     public static void main(String[] args) throws IOException, SQLException {
         process(System.in, System.out);
     }
@@ -79,19 +94,17 @@ public class Main  {
         
             records.forEach(record -> {
                     record.iterator().forEachRemaining(e -> {
-
                             try {
-                                if(e.isEmpty()) {
-                                    outPrintStream.printf("%n"); // EOL
-                                } else {
-                                    //outPrintStream.printf("%s%n", e);
+                                if(!e.isEmpty()) {
                                     final String[] tuple = keyValueSplitter(e);
-                                    outPrintStream.printf("%s='%s'  ", tuple[0], resolve(db, tuple[0], tuple[1]));
+                                    outPrintStream.printf("%s='%s',", tuple[0], resolve(db, tuple[0], tuple[1]));
                                 }
                             } catch(final Exception exception) {
                                 log.error("unexpected error on " + e, exception);
                             }
                         });
+
+                    outPrintStream.printf("%n"); // EOL
                 });
         }
 
@@ -113,12 +126,28 @@ public class Main  {
     
     private static String resolve(final Connection connection, final String key, final String value) throws SQLException {
         switch(key) {
+        case "CREATERECORDLOGIN":
+        case "READ/VIEWRECORDLOGIN":
+        case "UPDATERECORDLOGIN":
+        case "DELETERECORDLOGIN":
+        case "IDENTITYCREATED":
+        case "IDENTITYDELETED":
+        case "USER":
+        case "LOGIN":
+        case "LOGOUT":
         case "IDENTITY":
-            {
-                final User result = findUseByID(connection, value);
-                return (result != null) ? result.toString() : value;
-            }
-            
+                final User result = findUserByID(connection, value);
+                return (result != null) ? result.toString().replace(',', '|') : value;
+
+        case "TENANT":
+        case "GROUP":
+        case "GROUPCREATED":
+        case "GROUPDELETED":
+        case "GROUPROLEADDED":
+        case "GROUPROLEREVOKED":
+        case "DEFAULTTENANTDIVISIONCHANGEDGROUPID":
+            return findGroupNameByID( connection, value);
+                    
         default: return value;
         }
     }
@@ -133,24 +162,38 @@ public class Main  {
     /////////////////////////////////////////////////////////////////////////
 
     
-    public static User findUseByID(final Connection connection, final String ID) throws SQLException {
 
-        //System.out.println("ID IS " + ID);
+    public static String findGroupNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = tenantMap.get(ID);
+        if(name != null ) { return name;}
+
         val run = new QueryRunner();
-        return run.query(connection, "SELECT p.id, p.loginname, p.firstname, p.lastname, p.email  FROM accounttypeentity p WHERE p.id = ?", new BeanHandler<User>(User.class), ID);
-    }
+        val stub = run.query(connection, "SELECT p.name FROM grouptypeentity p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
 
-    
-    public static Set<User> findAllUsers(final Connection connection, final Set<String> ids, final int iLimit, final int iOffset) throws SQLException {
-        if(ids == null || ids.isEmpty()) {
-            return new HashSet<>();
+        if(stub != null )
+            {
+                tenantMap.put(ID, stub.getName());
+                return stub.getName();
+            }
+        else {
+            return ID;
         }
-        
-        val run = new QueryRunner();
-        val quotedList = ids.stream().map(id -> "'" + id + "'").collect(Collectors.toList());
-        val SQL = String.format("SELECT p.id, p.loginname, p.firstname, p.lastname, p.email  FROM accounttypeentity p WHERE p.id IN (%s) ORDER BY UPPER(p.loginname) ASC LIMIT ? OFFSET ?", StringUtils.join(quotedList, ","));
-        
-        return new HashSet<>(run.query(connection, SQL , new BeanListHandler<User>(User.class), iLimit, iOffset));
     }
+        
+    public static User findUserByID(final Connection connection, final String ID) throws SQLException {
+
+        // Cached?
+        User user = userMap.get(ID);
+        if(user != null ) { return user;}
+
+        val run = new QueryRunner();
+        user =  run.query(connection, "SELECT p.id, p.loginname, p.firstname, p.lastname, p.email  FROM accounttypeentity p WHERE p.id = ?", new BeanHandler<User>(User.class), ID);
+
+        // Cache it
+        if(user != null ) { userMap.put(ID, user);}
+
+        return user;
+    }
+
     
 }
