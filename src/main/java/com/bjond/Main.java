@@ -154,6 +154,8 @@ public class Main  {
     private static String resolve(final Connection connection, final String key, final String value) throws SQLException {
         switch(key) {
 
+        case "ASSIGNED_TO":
+        case "ASSIGNOR":
         case "ALREADYLOGGEDIN":
         case "LOCKEDACCOUNT":
         case "AUTHORIZATIONFAILURE":
@@ -171,6 +173,7 @@ public class Main  {
             final User result = findUserByID(connection, value);
             return (result != null) ? result.toString().replace(',', '|') : value;
 
+        case "TASKSTATETRANSITIONTENANT":            
         case "TENANT":
         case "GROUP":
         case "GROUPCREATED":
@@ -196,6 +199,8 @@ public class Main  {
 
         case "CLASS":
             return resolveClass(connection, value, lastRecordID);
+
+
 
             
         default:
