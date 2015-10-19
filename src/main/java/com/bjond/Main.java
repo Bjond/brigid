@@ -32,6 +32,7 @@ import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.handlers.BeanHandler;
 import org.apache.commons.lang.StringUtils;
 
+import com.bjond.entities.PersonStub;
 import com.bjond.entities.StringStub;
 import com.bjond.entities.User;
 
@@ -54,12 +55,13 @@ public class Main  {
     private static final String OPENSHIFT_POSTGRESQL_DB_PASSWORD = System.getenv("OPENSHIFT_POSTGRESQL_DB_PASSWORD");
 
     static String POSTGRESQL_URL; 
-
+    static String lastRecordID;
 
 
     // Caches
     private static Map<String, User> userMap = new HashMap<>();     // ID, User
-    private static Map<String, String> tenantMap = new HashMap<>(); // ID, name
+    private static Map<String, String> nameIDMap = new HashMap<>(); // ID, name
+    private static Map<String, PersonStub> personMap = new HashMap<>();     // ID, User
     
     
     /**
@@ -76,6 +78,15 @@ public class Main  {
     }
 
 
+    /**
+	 *  Given an input stream _in_ to an audit log, the unobfuscated log will be stream to _out_.
+	 * 
+	 * @param in
+	 * @param out
+	 * 
+	 * @throws IOException
+	 * @throws SQLException
+	 */
     private static void process(final InputStream in , final OutputStream out) throws IOException, SQLException {
         log.info("Execution begins...");
         
@@ -84,12 +95,10 @@ public class Main  {
 
         try(final Connection db = DriverManager.getConnection(POSTGRESQL_URL, OPENSHIFT_POSTGRESQL_DB_USERNAME, OPENSHIFT_POSTGRESQL_DB_PASSWORD);) {
         
-         
             final PrintStream outPrintStream = new PrintStream(out, true, "UTF-8");
             final Reader inReader = new InputStreamReader(in, "UTF-8");
             final Iterable<CSVRecord> records = CSVFormat.DEFAULT.withQuote('\'').parse(inReader);
 
-            //outPrintStream.printf("%s%n%n", POSTGRESQL_URL);
             log.info("PostgreSQL DB connectiion valid: {}", db.isValid(1000));
         
             records.forEach(record -> {
@@ -113,9 +122,15 @@ public class Main  {
 
     
 
+    /**
+	 *  Simply splits a key=value pair and removes single quotes.
+	 * 
+	 * @param element
+	 * @return
+	 */
     private static String[] keyValueSplitter(final String element) {
         // key=value split on equals
-        String[] s = element.split("=");
+        final String[] s = element.split("=");
 
         // Remove quotes
         s[1] = StringUtils.remove(s[1], '\'');
@@ -124,20 +139,37 @@ public class Main  {
     }
     
     
+    /**
+	 *  Performs the resolution process of accepting na opaque key/value pair
+     *  and returns an unobfuscated value. If no value can be resolved then value
+     *  is simply returned unaltered.
+	 * 
+	 * @param connection
+	 * @param key
+	 * @param value
+	 * @return
+	 * 
+	 * @throws SQLException
+	 */
     private static String resolve(final Connection connection, final String key, final String value) throws SQLException {
         switch(key) {
-        case "CREATERECORDLOGIN":
-        case "READ/VIEWRECORDLOGIN":
-        case "UPDATERECORDLOGIN":
-        case "DELETERECORDLOGIN":
+
+        case "ALREADYLOGGEDIN":
+        case "LOCKEDACCOUNT":
+        case "AUTHORIZATIONFAILURE":
+        case "LIMITEDIDENTITYCREATED":
+        case "ACCOUNTLOCKEDFORLOGIN":
+        case "ACCOUNTUNLOCKEDFORLOGIN":
+        case "PASSWORDVALIDATIONFAILUREFORLOGIN":
+        case "CLEAREDPASSWORDATTEMPTCOUNTERFORLOGIN":
         case "IDENTITYCREATED":
         case "IDENTITYDELETED":
         case "USER":
         case "LOGIN":
         case "LOGOUT":
         case "IDENTITY":
-                final User result = findUserByID(connection, value);
-                return (result != null) ? result.toString().replace(',', '|') : value;
+            final User result = findUserByID(connection, value);
+            return (result != null) ? result.toString().replace(',', '|') : value;
 
         case "TENANT":
         case "GROUP":
@@ -148,7 +180,26 @@ public class Main  {
         case "DEFAULTTENANTDIVISIONCHANGEDGROUPID":
             return findGroupNameByID( connection, value);
                     
-        default: return value;
+        case "ROLECREATED":
+        case "ROLEDELETED":
+        case "ROLEGRANTED":
+        case "ROLEREVOKED":
+        case "ROLEUPDATED":
+            return findRoleNameByID(connection, value);
+
+        case "CREATERECORDLOGIN":
+        case "READ/VIEWRECORDLOGIN":
+        case "UPDATERECORDLOGIN":
+        case "DELETERECORDLOGIN":
+            lastRecordID = value;
+            return value;
+
+        case "CLASS":
+            return resolveClass(connection, value, lastRecordID);
+
+            
+        default:
+            return value;
         }
     }
 
@@ -157,22 +208,188 @@ public class Main  {
 
 
 
+    /**
+	 * Given a class (a full package name plus classname), resolve the ID to a name or more.
+	 * 
+	 * @param connection
+	 * @param clazz
+	 * @param ID
+	 * @return
+	 * 
+	 * @throws SQLException
+	 */
+    public static String resolveClass(final Connection connection, final String clazz, final String ID ) throws SQLException {
+        switch(clazz) {
+        case "com.bjond.persistence.assessment.Assessment": return "Assessment: " + findAssessmentNameByID(connection,  ID);
+        case "com.bjond.persistence.task.BjondTask": return "BjondTask: " + findBjondTaskNameByID(connection,  ID);
+        case "com.bjond.persistence.permissions.UserDefinedRole": return "UserDefinedRole: " + findUserDefinedRoleTaskNameByID(connection,  ID);
+        case "com.bjond.persistence.person.PersonPerson": return "Person: " + findPersonPersonByID(connection,  ID);
+        case "com.bjond.persistence.rule.RuleDefinition": return "RuleDefinition: " + findRuleDefinitionNameByID(connection,  ID);
+        case "com.bjond.persistence.tags.TagsFullText": return "Tag: " + findTagNameByID(connection,  ID);
+
+        default:
+            // Handles all questions identically.
+            if(clazz.startsWith("com.bjond.persistence.assessment.Question")) {
+                return clazz + ": " + findQuestionNameByID(connection,  ID);
+            }
+            return ID;
+        }
+        
+
+    }
+    
+
     /////////////////////////////////////////////////////////////////////////
     //                            Database Methods                         //
     /////////////////////////////////////////////////////////////////////////
 
     
+    public static String findTagNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM tags_fulltext p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+            nameIDMap.put(ID, stub.getName());
+            return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+
+    
+    public static String findQuestionNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM assessment_questions p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+            nameIDMap.put(ID, stub.getName());
+            return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+
+    public static String findRuleDefinitionNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM rule_definition p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+            nameIDMap.put(ID, stub.getName());
+            return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+
+
+    
+    public static String findPersonPersonByID(final Connection connection, final String ID) throws SQLException {
+        PersonStub stub  = personMap.get(ID);
+        if(stub != null ) { return stub.toString().replace(',', '|');}
+
+        val run = new QueryRunner();
+        stub = run.query(connection, "SELECT p.id, p.first_name, p.middle_name, p.last_name FROM person_person p WHERE p.id = ?", new BeanHandler<PersonStub>(PersonStub.class), ID);
+
+        if(stub != null ) {
+                personMap.put(ID, stub);
+                return stub.toString().replace(',', '|');
+            }
+        else {
+            return ID;
+        }
+    }
+
+
+    
+    public static String findUserDefinedRoleTaskNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM permissionsuserdefinedrole p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+                nameIDMap.put(ID, stub.getName());
+                return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+
+    
+    public static String findBjondTaskNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM bjondtask p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+                nameIDMap.put(ID, stub.getName());
+                return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+
+    
+    public static String findAssessmentNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM assessment p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+                nameIDMap.put(ID, stub.getName());
+                return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+
+    
+    public static String findRoleNameByID(final Connection connection, final String ID) throws SQLException {
+        String name  = nameIDMap.get(ID);
+        if(name != null ) { return name;}
+
+        val run = new QueryRunner();
+        val stub = run.query(connection, "SELECT p.name FROM roletypeentity p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+
+        if(stub != null ) {
+                nameIDMap.put(ID, stub.getName());
+                return stub.getName();
+            }
+        else {
+            return ID;
+        }
+    }
+    
 
     public static String findGroupNameByID(final Connection connection, final String ID) throws SQLException {
-        String name  = tenantMap.get(ID);
+        String name  = nameIDMap.get(ID);
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
         val stub = run.query(connection, "SELECT p.name FROM grouptypeentity p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
 
-        if(stub != null )
-            {
-                tenantMap.put(ID, stub.getName());
+        if(stub != null ) {
+                nameIDMap.put(ID, stub.getName());
                 return stub.getName();
             }
         else {
