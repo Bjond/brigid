@@ -87,7 +87,7 @@ public class Main  {
 	 * @throws IOException
 	 * @throws SQLException
 	 */
-    private static void process(final InputStream in , final OutputStream out) throws IOException, SQLException {
+    public static void process(final InputStream in , final OutputStream out) throws IOException, SQLException {
         log.info("Execution begins...");
         
         // Generate the POSTGRESQL URL form system envirionment variables.
