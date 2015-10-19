@@ -61,7 +61,7 @@ public class Main  {
     // Caches
     private static Map<String, User> userMap = new HashMap<>();     // ID, User
     private static Map<String, String> nameIDMap = new HashMap<>(); // ID, name
-    private static Map<String, PersonStub> personMap = new HashMap<>();     // ID, User
+    private static Map<String, PersonStub> personMap = new HashMap<>();     // ID, PersonStub
     
     
     /**
