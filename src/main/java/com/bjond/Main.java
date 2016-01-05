@@ -14,30 +14,25 @@
 
 package com.bjond;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.Reader;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.bjond.entities.PersonStub;
+import com.bjond.entities.StringStub;
+import com.bjond.entities.User;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.handlers.BeanHandler;
 import org.apache.commons.lang.StringUtils;
 
-import com.bjond.entities.PersonStub;
-import com.bjond.entities.StringStub;
-import com.bjond.entities.User;
+import java.io.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
-import lombok.val;
-import lombok.extern.slf4j.Slf4j;
+import static scala.ScalaHelloWorld.helloWorld;
 
 
 /** <p> Main entry point for the application </p>
@@ -74,6 +69,12 @@ public class Main  {
 	 * @throws SQLException
 	 */
     public static void main(String[] args) throws IOException, SQLException {
+        String str = helloWorld();
+        log.info(str);
+
+        final scala.ScalaHWClass hw = new scala.ScalaHWClass();
+        log.info(hw.helloWorld());
+
         process(System.in, System.out);
     }
 
@@ -91,9 +92,9 @@ public class Main  {
         log.info("Execution begins...");
         
         // Generate the POSTGRESQL URL form system envirionment variables.
-        POSTGRESQL_URL = String.format("jdbc:postgresql://%s:%s/%s", OPENSHIFT_POSTGRESQL_DB_HOST, OPENSHIFT_POSTGRESQL_DB_PORT, OPENSHIFT_APP_NAME); 
+        POSTGRESQL_URL = String.format("jdbc:postgresql://%s:%s/%s", OPENSHIFT_POSTGRESQL_DB_HOST, OPENSHIFT_POSTGRESQL_DB_PORT, OPENSHIFT_APP_NAME);
 
-        try(final Connection db = DriverManager.getConnection(POSTGRESQL_URL, OPENSHIFT_POSTGRESQL_DB_USERNAME, OPENSHIFT_POSTGRESQL_DB_PASSWORD);) {
+        try (final Connection db = DriverManager.getConnection(POSTGRESQL_URL, OPENSHIFT_POSTGRESQL_DB_USERNAME, OPENSHIFT_POSTGRESQL_DB_PASSWORD)) {
         
             final PrintStream outPrintStream = new PrintStream(out, true, "UTF-8");
             final Reader inReader = new InputStreamReader(in, "UTF-8");
@@ -140,17 +141,16 @@ public class Main  {
     
     
     /**
-	 *  Performs the resolution process of accepting na opaque key/value pair
+     *  Performs the resolution process of accepting na opaque key/value pair
      *  and returns an unobfuscated value. If no value can be resolved then value
      *  is simply returned unaltered.
-	 * 
-	 * @param connection
-	 * @param key
-	 * @param value
-	 * @return
-	 * 
-	 * @throws SQLException
-	 */
+     *
+     * @param connection
+     * @param key
+     * @param value
+     * @return
+     * @throws SQLException
+     */
     private static String resolve(final Connection connection, final String key, final String value) throws SQLException {
         switch(key) {
 
@@ -214,15 +214,14 @@ public class Main  {
 
 
     /**
-	 * Given a class (a full package name plus classname), resolve the ID to a name or more.
-	 * 
-	 * @param connection
-	 * @param clazz
-	 * @param ID
-	 * @return
-	 * 
-	 * @throws SQLException
-	 */
+     * Given a class (a full package name plus classname), resolve the ID to a name or more.
+     *
+     * @param connection
+     * @param clazz
+     * @param ID
+     * @return
+     * @throws SQLException
+     */
     public static String resolveClass(final Connection connection, final String clazz, final String ID ) throws SQLException {
         switch(clazz) {
         case "com.bjond.persistence.assessment.Assessment": return "Assessment: " + findAssessmentNameByID(connection,  ID);
@@ -254,7 +253,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM tags_fulltext p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM tags_fulltext p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
             nameIDMap.put(ID, stub.getName());
@@ -271,7 +270,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM assessment_questions p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM assessment_questions p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
             nameIDMap.put(ID, stub.getName());
@@ -287,7 +286,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM rule_definition p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM rule_definition p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
             nameIDMap.put(ID, stub.getName());
@@ -305,7 +304,7 @@ public class Main  {
         if(stub != null ) { return stub.toString().replace(',', '|');}
 
         val run = new QueryRunner();
-        stub = run.query(connection, "SELECT p.id, p.first_name, p.middle_name, p.last_name FROM person_person p WHERE p.id = ?", new BeanHandler<PersonStub>(PersonStub.class), ID);
+        stub = run.query(connection, "SELECT p.id, p.first_name, p.middle_name, p.last_name FROM person_person p WHERE p.id = ?", new BeanHandler<>(PersonStub.class), ID);
 
         if(stub != null ) {
                 personMap.put(ID, stub);
@@ -317,13 +316,18 @@ public class Main  {
     }
 
 
-    
+    /**
+     * @param connection
+     * @param ID
+     * @return
+     * @throws SQLException
+     */
     public static String findUserDefinedRoleTaskNameByID(final Connection connection, final String ID) throws SQLException {
         String name  = nameIDMap.get(ID);
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM permissionsuserdefinedrole p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM permissionsuserdefinedrole p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
                 nameIDMap.put(ID, stub.getName());
@@ -340,7 +344,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM bjondtask p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM bjondtask p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
                 nameIDMap.put(ID, stub.getName());
@@ -357,7 +361,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM assessment p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM assessment p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
                 nameIDMap.put(ID, stub.getName());
@@ -374,7 +378,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM roletypeentity p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM roletypeentity p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
                 nameIDMap.put(ID, stub.getName());
@@ -391,7 +395,7 @@ public class Main  {
         if(name != null ) { return name;}
 
         val run = new QueryRunner();
-        val stub = run.query(connection, "SELECT p.name FROM grouptypeentity p WHERE p.id = ?", new BeanHandler<StringStub>(StringStub.class), ID);
+        final StringStub stub = run.query(connection, "SELECT p.name FROM grouptypeentity p WHERE p.id = ?", new BeanHandler<>(StringStub.class), ID);
 
         if(stub != null ) {
                 nameIDMap.put(ID, stub.getName());
@@ -409,7 +413,7 @@ public class Main  {
         if(user != null ) { return user;}
 
         val run = new QueryRunner();
-        user =  run.query(connection, "SELECT p.id, p.loginname, p.firstname, p.lastname, p.email  FROM accounttypeentity p WHERE p.id = ?", new BeanHandler<User>(User.class), ID);
+        user = run.query(connection, "SELECT p.id, p.loginname, p.firstname, p.lastname, p.email  FROM accounttypeentity p WHERE p.id = ?", new BeanHandler<>(User.class), ID);
 
         // Cache it
         if(user != null ) { userMap.put(ID, user);}

@@ -14,7 +14,6 @@
 
 package com.bjond.test;
 
-import scala.ScalaHelloWorld;
 import static org.assertj.core.api.StrictAssertions.assertThat;
 
 import java.io.File;
@@ -51,8 +50,9 @@ public class TestBrigid
         Assert.assertTrue("I found test data", resource.exists());
         assertThat(resource.exists()).isTrue();
 
-        assertThat(new ScalaHelloWorld().helloWorld()).isEqualTo("Hello World");
-        System.out.println(" " + new ScalaHelloWorld().helloWorld());
+
+        assertThat(scala.ScalaHelloWorld.helloWorld()).isEqualTo("Hello World");
+        //System.out.println(" " + ScalaHelloWorld.helloWorld());
     }
 
 
