@@ -14,7 +14,6 @@
 
 package com.bjond.test;
 
-import scala.ScalaHelloWorld;
 import static org.assertj.core.api.StrictAssertions.assertThat;
 
 import java.io.File;
@@ -26,7 +25,7 @@ import lombok.val;
 
 /** JUnit Test Suite TestBrigid
  *
- * @version 0.001 10/16/15
+ * @version 0.001 10/16/15mport scala.ScalaHelloWorld;
  * @author Stephen Agneta
  * @since Build 1.000
  *
@@ -50,9 +49,6 @@ public class TestBrigid
         val resource = new File("./src/main/resources/secure-audit.log");
         Assert.assertTrue("I found test data", resource.exists());
         assertThat(resource.exists()).isTrue();
-
-        assertThat(new ScalaHelloWorld().helloWorld()).isEqualTo("Hello World");
-        System.out.println(" " + new ScalaHelloWorld().helloWorld());
     }
 
 
