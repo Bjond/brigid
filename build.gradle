@@ -19,7 +19,6 @@ apply plugin: 'groovy'
 apply plugin: 'osgi'
 apply plugin: 'java'
 
-
 // For the entire project
 repositories {
     maven {url 'http://nexus.bjondhealth.com/nexus/content/groups/public'}
