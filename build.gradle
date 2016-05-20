@@ -1,12 +1,12 @@
 /*  Copyright (c) 2015
- *  by Bjond Health, Inc., Boston, MA
+ *  by Bjond, Inc., Boston, MA
  *
  *  This software is furnished under a license and may be used only in
  *  accordance with the terms of such license.  This software may not be
  *  provided or otherwise made available to any other party.  No title to
  *  nor ownership of the software is hereby transferred.
  *
- *  This software is the intellectual property of Bjond Health, Inc.,
+ *  This software is the intellectual property of Bjond, Inc.,
  *  and is protected by the copyright laws of the United States of America.
  *  All rights reserved internationally.
  *
@@ -123,4 +123,12 @@ task deployroot (type: Copy){
 
 }
 
+// Dummy task
+task war() {
+  dependsOn jar
+}
+
+task all() {
+  dependsOn  build, compileTestJava, findbugsMain, findbugsTest
+}
 
